@@ -77,11 +77,12 @@ export default function BodyPage() {
         if (dbErr) throw dbErr;
         setSuccess("Medida actualizada.");
       } else {
-        const { error: dbErr } = await supabase.from("measurements").insert(payload);
-        if (dbErr) {
-          if (dbErr.code === "23505") throw new Error("Tu base de datos tiene un índice único por fecha. Ejecuta este SQL en Supabase: ALTER TABLE measurements DROP CONSTRAINT IF EXISTS measurements_user_date_unique;");
-          throw dbErr;
-        }
+        // Upsert: if a row already exists for (user_id, date), merge the new fields into it
+        const { error: dbErr } = await supabase.from("measurements").upsert(payload, {
+          onConflict: "user_id,date",
+          ignoreDuplicates: false,
+        });
+        if (dbErr) throw dbErr;
         setSuccess("Medida guardada.");
       }
       clearForm(); await loadData();

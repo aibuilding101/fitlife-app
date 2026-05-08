@@ -347,7 +347,10 @@ function MeasurementsTab({ userId }: { userId: string }) {
       const payload: any = { user_id: session.user.id, date: today };
       if (weight)  payload.weight_kg = parseFloat(weight);
       if (bodyFat) payload.body_fat_percent = parseFloat(bodyFat);
-      const { error: dbErr } = await supabase.from("measurements").insert(payload);
+      const { error: dbErr } = await supabase.from("measurements").upsert(payload, {
+        onConflict: "user_id,date",
+        ignoreDuplicates: false,
+      });
       if (dbErr) throw dbErr;
       const parts: string[] = [];
       if (weight)  parts.push(`Peso ${weight} kg`);
