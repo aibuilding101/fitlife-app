@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       }
       const weeklyVolume = Object.entries(wkVol)
         .sort(([a], [b]) => a.localeCompare(b)).slice(-8)
-        .map(([key, vol]) => ({ label: weekLabel(key + "T12:00:00".slice(0)), volume: Math.round(vol) }));
+        .map(([key, vol]) => ({ label: weekLabel(key), volume: Math.round(vol) }));
 
       // Per-exercise tracking
       const exHistory: Record<string, { date: string; maxWeight: number; maxReps: number }[]> = {};

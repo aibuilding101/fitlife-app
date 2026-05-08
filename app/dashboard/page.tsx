@@ -400,7 +400,7 @@ function ProgressTab({ userId }: { userId: string }) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
-        const res = await fetch("/api/get-progress", { headers: { Authorization: `Bearer ${session.access_token}` } });
+        const res = await fetch("/api/get-body", { headers: { Authorization: `Bearer ${session.access_token}` } });
         if (res.ok) setData(await res.json());
       } catch (e) { console.error(e); } finally { setLoading(false); }
     })();
@@ -408,15 +408,61 @@ function ProgressTab({ userId }: { userId: string }) {
 
   if (loading) return <div className="content-card"><div className="loading-center"><div className="loading" /></div></div>;
 
+  const measurements: any[] = data?.measurements || [];
+  const latest = data?.latest;
+  const changes = data?.changes;
+
+  const fmtDate = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+
   return (
-    <div className="content-card">
-      <h3 className="card-title">Tu Progreso</h3>
-      <div className="section-label">Peso y Grasa Corporal</div>
-      <ProgressChart data={data?.chartData || []} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginTop: "24px" }}>
-        <MiniStat label="Entrenamientos" value={String(data?.workoutCount || 0)} />
+    <>
+      <div className="content-card" style={{ marginBottom: "20px" }}>
+        <h3 className="card-title">Peso y Grasa Corporal</h3>
+        <ProgressChart data={data?.chartData || []} />
+        {latest && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginTop: "20px" }}>
+            {latest.weight  != null && <MiniStat label="Último peso"  value={`${latest.weight} kg`} />}
+            {latest.bodyFat != null && <MiniStat label="Último BF%"   value={`${latest.bodyFat}%`} />}
+            {changes?.weightChange != null && <MiniStat label="Δ Peso" value={`${changes.weightChange > 0 ? "+" : ""}${changes.weightChange} kg`} />}
+          </div>
+        )}
       </div>
-    </div>
+
+      {measurements.length > 0 && (
+        <div className="content-card">
+          <h3 className="card-title">Todas las medidas</h3>
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Peso</th><th>Grasa</th><th>Pecho</th>
+                  <th>Cintura</th><th>Brazos</th><th>Muslo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...measurements].reverse().map((m: any) => (
+                  <tr key={m.id}>
+                    <td style={{ color: "var(--text)" }}>{fmtDate(m.date)}</td>
+                    <td>{m.weight_kg       ? `${m.weight_kg} kg`  : "--"}</td>
+                    <td>{m.body_fat_percent ? `${m.body_fat_percent}%` : "--"}</td>
+                    <td>{m.chest_cm        ? `${m.chest_cm}cm`   : "--"}</td>
+                    <td>{m.waist_cm        ? `${m.waist_cm}cm`   : "--"}</td>
+                    <td>{m.arm_left_cm     ? `${m.arm_left_cm}/${m.arm_right_cm ?? "?"}cm` : "--"}</td>
+                    <td>{m.thigh_cm        ? `${m.thigh_cm}cm`   : "--"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {measurements.length === 0 && (
+        <div className="content-card">
+          <p className="empty-state">Sin medidas todavía. Ve a <strong>Body</strong> para registrar tus primeras medidas.</p>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -78,10 +78,7 @@ export default function BodyPage() {
         setSuccess("Medida actualizada.");
       } else {
         const { error: dbErr } = await supabase.from("measurements").insert(payload);
-        if (dbErr) {
-          if (dbErr.code === "23505") throw new Error("Ya registraste una medida para esta fecha. Edítala desde el historial.");
-          throw dbErr;
-        }
+        if (dbErr) throw dbErr;
         setSuccess("Medida guardada.");
       }
       clearForm(); await loadData();
@@ -250,7 +247,7 @@ export default function BodyPage() {
               <tbody>
                 {[...(measurements || [])].reverse().map((m: any) => (
                   <tr key={m.id}>
-                    <td style={{ color: "var(--text)" }}>{m.date}</td>
+                    <td style={{ color: "var(--text)" }}>{new Date(m.date + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}</td>
                     <td>{m.weight_kg ? `${m.weight_kg} kg` : "--"}</td>
                     <td>{m.body_fat_percent ? `${m.body_fat_percent}%` : "--"}</td>
                     <td>{m.chest_cm ? `${m.chest_cm}cm` : "--"}</td>

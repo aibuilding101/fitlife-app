@@ -39,7 +39,7 @@ export default function RoutinesPage() {
   );
 
   const { suggestions = [] } = data || {};
-  const routines = (data?.routines || []).filter((r: any) => r.sessionCount > 0);
+  const routines = data?.routines || [];
 
   return (
     <>

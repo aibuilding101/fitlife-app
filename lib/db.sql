@@ -47,13 +47,18 @@ CREATE TABLE IF NOT EXISTS workout_logs (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Body Measurements (Weight, Body Fat)
+-- Body Measurements (Weight, Body Fat, and circumferences)
 CREATE TABLE IF NOT EXISTS measurements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   weight_kg DECIMAL(5,2),
   body_fat_percent DECIMAL(5,2),
+  chest_cm DECIMAL(5,2),
+  arm_left_cm DECIMAL(5,2),
+  arm_right_cm DECIMAL(5,2),
+  waist_cm DECIMAL(5,2),
+  thigh_cm DECIMAL(5,2),
   notes TEXT,
   photo_url TEXT,
   created_at TIMESTAMP DEFAULT NOW()

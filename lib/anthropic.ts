@@ -86,19 +86,20 @@ REQUIRED JSON FORMAT:
       "sets": [{"reps": number, "weight": number, "unit": "lbs|kg"}]
     }
   ],
-  "duration_minutes": number,
+  "duration_minutes": 0,
   "assumptions": ["list every assumption made: units, equipment, missing data"],
   "confidence": 0.0
 }
 
 Rules:
 - NEVER ask questions. Always make reasonable assumptions and log them.
+- duration_minutes: use 0 always — do NOT ask the user for duration, do NOT infer it.
 - Default weight unit: lbs (unless kg is mentioned).
 - Expand shorthand: "3x10 @ 35lbs" → three set objects each with reps:10, weight:35, unit:"lbs".
 - When sets have different reps (e.g. "12, 10 y 10"), create one set object per rep count.
 - Handle any language, accented characters (á é í ó ú ñ), parentheses, commas, and mixed units.
 - Translate exercise names to English.
-- Use 0 for unknown weight or duration.
+- Use 0 for unknown weight.
 - assumptions array must be non-empty — always document what you assumed.`,
       },
     ],
