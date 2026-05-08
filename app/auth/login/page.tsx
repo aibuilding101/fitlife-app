@@ -16,15 +16,9 @@ export default function LogIn() {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      const { error: logInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error: logInError } = await supabase.auth.signInWithPassword({ email, password });
       if (logInError) throw logInError;
-
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Error logging in");
@@ -34,70 +28,29 @@ export default function LogIn() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#f5f5f5",
-      }}
-    >
-      <div
-        style={{
-          background: "white",
-          padding: "40px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          width: "100%",
-          maxWidth: "400px",
-        }}
-      >
-        <h1 style={{ marginBottom: "30px", textAlign: "center" }}>FitLife</h1>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">FitLife<span>.</span></div>
+        <p className="auth-subtitle">Welcome back</p>
 
         <form onSubmit={handleLogIn}>
           <div className="form-group">
             <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="your@email.com"
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="your@email.com" />
           </div>
-
-          <div className="form-group">
+          <div className="form-group" style={{ marginBottom: "24px" }}>
             <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Your password"
-            />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Your password" />
           </div>
-
-          {error && <div className="error">{error}</div>}
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: "100%", marginBottom: "16px" }}
-            disabled={loading}
-          >
+          {error && <div className="error" style={{ marginBottom: "12px" }}>{error}</div>}
+          <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
             {loading ? "Logging in..." : "Log In"}
           </button>
         </form>
 
-        <p style={{ textAlign: "center", color: "#666" }}>
-          Don't have an account?{" "}
-          <Link
-            href="/auth/signup"
-            style={{ color: "#0066cc", textDecoration: "none" }}
-          >
-            Sign Up
-          </Link>
+        <p className="auth-footer">
+          Don&apos;t have an account?{" "}
+          <Link href="/auth/signup">Sign Up</Link>
         </p>
       </div>
     </div>

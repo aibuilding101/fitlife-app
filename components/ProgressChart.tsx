@@ -11,24 +11,28 @@ interface ChartDataPoint {
 export function ProgressChart({ data }: { data: ChartDataPoint[] }) {
   if (!data || data.length === 0) {
     return (
-      <div style={{ color: "#444", padding: "20px", textAlign: "center", fontSize: "14px" }}>
-        No hay datos todavía. Registra medidas para ver gráficos.
+      <div style={{ color: "#3a4a44", padding: "32px 0", textAlign: "center", fontSize: "13px" }}>
+        Sin datos todavía. Registra medidas para ver gráficos.
       </div>
     );
   }
 
   return (
-    <div style={{ width: "100%", height: 320 }}>
+    <div style={{ width: "100%", height: 300 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-          <XAxis dataKey="date" tick={{ fill: "#444", fontSize: 11 }} axisLine={{ stroke: "#1a1a1a" }} tickLine={false} />
-          <YAxis yAxisId="left" tick={{ fill: "#444", fontSize: 11 }} axisLine={false} tickLine={false} label={{ value: "kg", angle: -90, position: "insideLeft", fill: "#444", fontSize: 11 }} />
-          <YAxis yAxisId="right" orientation="right" tick={{ fill: "#444", fontSize: 11 }} axisLine={false} tickLine={false} label={{ value: "%", angle: 90, position: "insideRight", fill: "#444", fontSize: 11 }} />
-          <Tooltip contentStyle={{ background: "#141414", border: "1px solid #222", borderRadius: "8px", color: "#fff", fontSize: "13px" }} />
-          <Legend wrapperStyle={{ color: "#555", fontSize: "12px" }} />
-          <Line yAxisId="left" type="monotone" dataKey="weight" stroke="#00ff88" name="Peso (kg)" dot={false} strokeWidth={2} />
-          <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#7c3aed" name="Grasa (%)" dot={false} strokeWidth={2} />
+        <LineChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#2a3530" vertical={false} />
+          <XAxis dataKey="date" tick={{ fill: "#8a9590", fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis yAxisId="left"  tick={{ fill: "#8a9590", fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
+          <YAxis yAxisId="right" orientation="right" tick={{ fill: "#8a9590", fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
+          <Tooltip
+            contentStyle={{ background: "#1c2521", border: "1px solid #2a3530", borderRadius: "10px", color: "#e8efea", fontSize: "12px" }}
+            labelStyle={{ color: "#8a9590", marginBottom: "4px" }}
+            cursor={{ stroke: "#2a3530" }}
+          />
+          <Legend wrapperStyle={{ color: "#8a9590", fontSize: "12px", paddingTop: "16px" }} />
+          <Line yAxisId="left"  type="monotone" dataKey="weight"  stroke="#7df0a8" name="Peso (kg)"  dot={false} strokeWidth={2} />
+          <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#ff7670" name="Grasa (%)" dot={false} strokeWidth={2} />
         </LineChart>
       </ResponsiveContainer>
     </div>
