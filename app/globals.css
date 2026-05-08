@@ -5,7 +5,8 @@
   --s1:        #141b18;
   --s2:        #1c2521;
   --border:    #2a3530;
-  --accent:    #7df0a8;
+  --accent:    #FF6B6B;
+  --accent-light: #FF8E8E;
   --text:      #e8efea;
   --muted:     #8a9590;
   --coral:     #ff7670;
@@ -84,7 +85,7 @@ button { cursor: pointer; }
   text-align: left;
 }
 .nav-item:hover { background: var(--s2); color: var(--text); }
-.nav-item.active { background: rgba(125,240,168,0.08); color: var(--accent); font-weight: 500; }
+.nav-item.active { background: rgba(255,107,107,0.08); color: var(--accent); font-weight: 500; }
 
 .nav-dot {
   width: 5px; height: 5px;
@@ -135,7 +136,7 @@ button { cursor: pointer; }
   padding: 20px 22px 18px;
   transition: border-color 0.2s;
 }
-.stat-card:hover { border-color: rgba(125,240,168,0.18); }
+.stat-card:hover { border-color: rgba(255,107,107,0.18); }
 
 .stat-label {
   font-size: 10px; font-weight: 600;
@@ -186,7 +187,7 @@ button { cursor: pointer; }
   white-space: nowrap;
 }
 .btn-primary { background: var(--accent); color: var(--bg); font-weight: 600; }
-.btn-primary:hover { background: #91f4b8; }
+.btn-primary:hover { background: #FF8E8E; }
 .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 .btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
 .btn-secondary:hover { border-color: #3d4d47; color: var(--text); }
@@ -223,7 +224,7 @@ button { cursor: pointer; }
 .form-group select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(125,240,168,0.07);
+  box-shadow: 0 0 0 3px rgba(255,107,107,0.07);
 }
 .form-group input::placeholder,
 .form-group textarea::placeholder { color: #2e3e38; }
@@ -232,8 +233,8 @@ button { cursor: pointer; }
 
 .success-banner {
   color: var(--accent);
-  background: rgba(125,240,168,0.05);
-  border: 1px solid rgba(125,240,168,0.12);
+  background: rgba(255,107,107,0.05);
+  border: 1px solid rgba(255,107,107,0.12);
   padding: 11px 15px;
   border-radius: var(--r-md);
   margin-bottom: 16px;
@@ -357,7 +358,7 @@ button { cursor: pointer; }
   font-size: 11px; font-weight: 600;
   letter-spacing: 0.04em; white-space: nowrap;
 }
-.badge-green  { background: rgba(125,240,168,0.1); color: var(--accent); border: 1px solid rgba(125,240,168,0.2); }
+.badge-green  { background: rgba(255,107,107,0.1); color: var(--accent); border: 1px solid rgba(255,107,107,0.2); }
 .badge-yellow { background: rgba(240,201,125,0.1); color: var(--amber);  border: 1px solid rgba(240,201,125,0.2); }
 .badge-red    { background: rgba(255,118,112,0.1); color: var(--coral);  border: 1px solid rgba(255,118,112,0.2); }
 .badge-gray   { background: rgba(138,149,144,0.1); color: var(--muted);  border: 1px solid rgba(138,149,144,0.2); }

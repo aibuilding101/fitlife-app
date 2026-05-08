@@ -117,10 +117,10 @@ export default function AnalyticsPage() {
                   tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v)} />
                 <Tooltip
                   contentStyle={{ background: "#1c2521", border: "1px solid #2a3530", borderRadius: "8px", color: "#e8efea", fontSize: "12px" }}
-                  cursor={{ fill: "rgba(125,240,168,0.04)" }}
+                  cursor={{ fill: "rgba(255,107,107,0.04)" }}
                   formatter={(v: any) => [v.toLocaleString(), "Volumen"]}
                 />
-                <Bar dataKey="volume" fill="#7df0a8" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="volume" fill="var(--accent)" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -196,12 +196,47 @@ export default function AnalyticsPage() {
           <span style={{ fontSize: "11px", color: "var(--muted)" }}>Menos</span>
           {[0, 0.3, 0.6, 1].map(op => (
             <div key={op} style={{ width: "11px", height: "11px", borderRadius: "2px",
-              background: op === 0 ? "var(--border)" : `rgba(125,240,168,${op})` }} />
+              background: op === 0 ? "var(--border)" : `rgba(255,107,107,${op})` }} />
           ))}
           <span style={{ fontSize: "11px", color: "var(--muted)" }}>Más</span>
         </div>
       </div>
+
+      {/* ── Badges ── */}
+      <div className="content-card" style={{ marginTop: "20px" }}>
+        <h3 className="card-title">Logros</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}>
+          <BadgeCard title="First Step"    desc="Primer entrenamiento registrado"  earned={totalWorkouts >= 1}   icon="🏆" />
+          <BadgeCard title="5-Day Streak"  desc="5 días consecutivos"              earned={streak >= 5}          icon="🔥" />
+          <BadgeCard title="10-Day Streak" desc="10 días consecutivos"             earned={streak >= 10}         icon="🔥🔥" />
+          <BadgeCard title="21-Day Streak" desc="21 días consecutivos"             earned={streak >= 21}         icon="💎" />
+          <BadgeCard title="100 Workouts"  desc="100 entrenamientos totales"       earned={totalWorkouts >= 100} icon="💯" />
+          <BadgeCard
+            title="Iron Warrior"
+            desc="500,000 lbs de volumen total"
+            earned={weeklyVolume.reduce((s: number, w: any) => s + w.volume, 0) * 12 >= 500000}
+            icon="⚔️"
+          />
+        </div>
+      </div>
     </>
+  );
+}
+
+// ── Badge card ────────────────────────────────────────────────────────────────
+
+function BadgeCard({ title, desc, earned, icon }: { title: string; desc: string; earned: boolean; icon: string }) {
+  return (
+    <div style={{
+      padding: "16px", borderRadius: "var(--r-lg)",
+      border: `1px solid ${earned ? "rgba(255,107,107,0.3)" : "var(--border)"}`,
+      background: earned ? "rgba(255,107,107,0.06)" : "var(--s2)",
+      opacity: earned ? 1 : 0.4,
+    }}>
+      <div style={{ fontSize: "24px", marginBottom: "8px" }}>{icon}</div>
+      <div style={{ fontSize: "13px", fontWeight: 600, color: earned ? "var(--accent)" : "var(--muted)", marginBottom: "4px" }}>{title}</div>
+      <div style={{ fontSize: "11px", color: "var(--muted)" }}>{desc}</div>
+    </div>
   );
 }
 

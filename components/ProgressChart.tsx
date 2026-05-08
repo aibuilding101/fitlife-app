@@ -31,7 +31,7 @@ export function ProgressChart({ data }: { data: ChartDataPoint[] }) {
             cursor={{ stroke: "#2a3530" }}
           />
           <Legend wrapperStyle={{ color: "#8a9590", fontSize: "12px", paddingTop: "16px" }} />
-          <Line yAxisId="left"  type="monotone" dataKey="weight"  stroke="#7df0a8" name="Peso (kg)"  dot={false} strokeWidth={2} />
+          <Line yAxisId="left"  type="monotone" dataKey="weight"  stroke="#FF6B6B" name="Peso (kg)"  dot={false} strokeWidth={2} />
           <Line yAxisId="right" type="monotone" dataKey="bodyFat" stroke="#ff7670" name="Grasa (%)" dot={false} strokeWidth={2} />
         </LineChart>
       </ResponsiveContainer>

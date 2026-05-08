@@ -9,9 +9,17 @@ import {
 
 export default function RoutinesPage() {
   const router = useRouter();
-  const [data, setData]       = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData]         = useState<any>(null);
+  const [loading, setLoading]   = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [quickLogging, setQuickLogging] = useState<string | null>(null);
+
+  const reload = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const res = await fetch("/api/get-routines", { headers: { Authorization: `Bearer ${session.access_token}` } });
+    if (res.ok) setData(await res.json());
+  };
 
   useEffect(() => {
     (async () => {
@@ -91,7 +99,10 @@ export default function RoutinesPage() {
               key={r.name}
               routine={r}
               expanded={expanded === r.name}
-              onToggle={() => setExpanded(expanded === r.name ? null : r.name)}
+              onToggle={() => { setExpanded(expanded === r.name ? null : r.name); setQuickLogging(null); }}
+              quickLog={quickLogging === r.name}
+              onToggleQuickLog={() => { setQuickLogging(quickLogging === r.name ? null : r.name); setExpanded(null); }}
+              onSaved={reload}
             />
           ))}
         </div>
@@ -102,42 +113,59 @@ export default function RoutinesPage() {
 
 // ── Routine card ──────────────────────────────────────────────────────────────
 
-function RoutineCard({ routine: r, expanded, onToggle }: {
+function RoutineCard({ routine: r, expanded, onToggle, quickLog, onToggleQuickLog, onSaved }: {
   routine: any; expanded: boolean; onToggle: () => void;
+  quickLog: boolean; onToggleQuickLog: () => void; onSaved: () => void;
 }) {
   const plateaued = (r.exercises || []).filter((e: any) => e.isPlateaued).length;
 
   return (
     <div className="content-card" style={{ padding: 0, overflow: "hidden" }}>
       {/* Header */}
-      <button
-        onClick={onToggle}
-        style={{
-          width: "100%", background: "none", border: "none", padding: "24px 28px",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          cursor: "pointer", textAlign: "left",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: "18px", fontWeight: 600, color: "var(--text)", marginBottom: "4px" }}>
-              {r.name}
+      <div style={{ padding: "24px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button
+          onClick={onToggle}
+          style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", flex: 1 }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            <div>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: "18px", fontWeight: 600, color: "var(--text)", marginBottom: "4px" }}>
+                {r.name}
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--muted)" }}>
+                {r.sessionCount} sesiones
+                {r.lastTrainedDaysAgo !== null && (
+                  <span> · hace {r.lastTrainedDaysAgo === 0 ? "hoy" : `${r.lastTrainedDaysAgo}d`}</span>
+                )}
+              </div>
             </div>
-            <div style={{ fontSize: "12px", color: "var(--muted)" }}>
-              {r.sessionCount} sesiones
-              {r.lastTrainedDaysAgo !== null && (
-                <span> · hace {r.lastTrainedDaysAgo === 0 ? "hoy" : `${r.lastTrainedDaysAgo}d`}</span>
-              )}
-            </div>
+            {plateaued > 0 && (
+              <span className="badge badge-yellow">{plateaued} plateau{plateaued !== 1 ? "s" : ""}</span>
+            )}
           </div>
-          {plateaued > 0 && (
-            <span className="badge badge-yellow">{plateaued} plateau{plateaued !== 1 ? "s" : ""}</span>
-          )}
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            onClick={onToggleQuickLog}
+            style={{
+              padding: "7px 14px", borderRadius: "var(--r-md)", border: `1px solid ${quickLog ? "var(--accent)" : "rgba(255,107,107,0.3)"}`,
+              background: quickLog ? "rgba(255,107,107,0.12)" : "none",
+              color: "var(--accent)", fontSize: "12px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            {quickLog ? "Cerrar" : "Log rápido"}
+          </button>
+          <span
+            onClick={onToggle}
+            style={{ color: "var(--muted)", fontSize: "18px", transition: "transform 0.2s", transform: expanded ? "rotate(180deg)" : "none", cursor: "pointer" }}
+          >
+            ↓
+          </span>
         </div>
-        <span style={{ color: "var(--muted)", fontSize: "18px", transition: "transform 0.2s", transform: expanded ? "rotate(180deg)" : "none" }}>
-          ↓
-        </span>
-      </button>
+      </div>
+
+      {/* Quick log form */}
+      {quickLog && <QuickLogForm routine={r} onClose={onToggleQuickLog} onSaved={onSaved} />}
 
       {/* Expanded content */}
       {expanded && (
@@ -154,9 +182,9 @@ function RoutineCard({ routine: r, expanded, onToggle }: {
                     <YAxis tick={{ fill: "#8a9590", fontSize: 10 }} axisLine={false} tickLine={false} width={40} />
                     <Tooltip
                       contentStyle={{ background: "#1c2521", border: "1px solid #2a3530", borderRadius: "8px", color: "#e8efea", fontSize: "12px" }}
-                      cursor={{ fill: "rgba(125,240,168,0.04)" }}
+                      cursor={{ fill: "rgba(255,107,107,0.04)" }}
                     />
-                    <Bar dataKey="volume" fill="#7df0a8" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="volume" fill="var(--accent)" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -214,6 +242,84 @@ function RoutineCard({ routine: r, expanded, onToggle }: {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Quick log form ────────────────────────────────────────────────────────────
+
+function QuickLogForm({ routine, onClose, onSaved }: {
+  routine: any; onClose: () => void; onSaved: () => void;
+}) {
+  const [entries, setEntries] = useState<any[]>(
+    (routine.exercises || []).map((ex: any) => ({
+      name: ex.name, sets: 3, reps: 8, weight: ex.currentWeight || 0, unit: "lbs",
+    }))
+  );
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const update = (i: number, field: string, val: any) => {
+    setEntries(prev => prev.map((e, idx) => idx === i ? { ...e, [field]: val } : e));
+  };
+
+  const handleSave = async () => {
+    setSaving(true); setError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const res = await fetch("/api/log-routine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ routineName: routine.name, entries }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      setSuccess(true);
+      setTimeout(() => { onSaved(); onClose(); }, 1200);
+    } catch (e: any) { setError(e.message); } finally { setSaving(false); }
+  };
+
+  if (success) return (
+    <div style={{ padding: "24px 28px", borderTop: "1px solid var(--border)" }}>
+      <div className="success-banner">✅ {routine.name} guardado!</div>
+    </div>
+  );
+
+  return (
+    <div style={{ borderTop: "1px solid var(--border)", padding: "24px 28px" }}>
+      <div className="section-label" style={{ margin: "0 0 16px" }}>Log rápido — edita los pesos</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px 80px 70px", gap: "8px" }}>
+          {["Ejercicio","Series","Reps","Peso","Unidad"].map(h => (
+            <span key={h} style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", color: "var(--muted)", textTransform: "uppercase", textAlign: h === "Ejercicio" ? "left" : "center" }}>{h}</span>
+          ))}
+        </div>
+        {entries.map((entry, i) => (
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px 80px 70px", gap: "8px", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
+            <input type="number" min="1" max="10" value={entry.sets}   onChange={e => update(i, "sets",   parseInt(e.target.value)   || 1)}
+              style={{ padding: "6px 8px", background: "var(--s2)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", color: "var(--text)", fontSize: "13px", textAlign: "center", width: "100%" }} />
+            <input type="number" min="1" max="50" value={entry.reps}   onChange={e => update(i, "reps",   parseInt(e.target.value)   || 1)}
+              style={{ padding: "6px 8px", background: "var(--s2)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", color: "var(--text)", fontSize: "13px", textAlign: "center", width: "100%" }} />
+            <input type="number" min="0" step="2.5" value={entry.weight} onChange={e => update(i, "weight", parseFloat(e.target.value) || 0)}
+              style={{ padding: "6px 8px", background: "var(--s2)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", color: "var(--text)", fontSize: "13px", textAlign: "center", width: "100%" }} />
+            <select value={entry.unit} onChange={e => update(i, "unit", e.target.value)}
+              style={{ padding: "6px 4px", background: "var(--s2)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", color: "var(--text)", fontSize: "12px", width: "100%" }}>
+              <option value="lbs">lbs</option>
+              <option value="kg">kg</option>
+            </select>
+          </div>
+        ))}
+      </div>
+      {error && <div className="error" style={{ marginTop: "12px" }}>{error}</div>}
+      <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? "Guardando..." : "Guardar entrenamiento"}
+        </button>
+        <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+      </div>
     </div>
   );
 }
