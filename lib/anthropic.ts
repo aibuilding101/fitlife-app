@@ -39,17 +39,18 @@ ${sanitized}
 
 REQUIRED JSON FORMAT:
 {
-  "foods": [{"food": "name", "quantity": number, "unit": "g|units"}],
   "macros": {"protein_g": number, "carbs_g": number, "fat_g": number, "calories": number},
-  "confidence": 0.0,
-  "questions": []
+  "assumptions": ["list every assumption you made about ingredients, portions, preparation"],
+  "confidence": 0.0
 }
 
 Rules:
-- All number fields must be numbers, never strings or null
-- Use 0 for unknown numeric values
-- Add clarifications to questions array if confidence < 0.8
-- Handle any language, accented characters, abbreviations, and mixed units`,
+- NEVER ask questions. Always make reasonable assumptions and log them.
+- If the food is vague (e.g. "pechuga"), assume the most common preparation (e.g. grilled chicken breast, 150g, no skin).
+- If portion is missing, assume a standard portion and document it.
+- All number fields must be numbers, never strings or null. Use 0 if truly unknown.
+- Handle any language, accented characters, abbreviations, and mixed units.
+- assumptions array must be non-empty — always document what you assumed.`,
       },
     ],
   });
@@ -86,18 +87,19 @@ REQUIRED JSON FORMAT:
     }
   ],
   "duration_minutes": number,
-  "confidence": 0.0,
-  "questions": []
+  "assumptions": ["list every assumption made: units, equipment, missing data"],
+  "confidence": 0.0
 }
 
 Rules:
-- All number fields must be numbers, never strings or null
-- Use 0 for unknown weight/duration values
-- Expand shorthand: "3x10 @ 35lbs" → three set objects each with reps:10, weight:35, unit:"lbs"
-- When sets have different reps (e.g. "12, 10 y 10"), create one set object per rep count
-- Handle any language, accented characters (á é í ó ú ñ), parentheses, commas, and mixed units
-- Translate exercise names to English
-- Add clarifications to questions if confidence < 0.8`,
+- NEVER ask questions. Always make reasonable assumptions and log them.
+- Default weight unit: lbs (unless kg is mentioned).
+- Expand shorthand: "3x10 @ 35lbs" → three set objects each with reps:10, weight:35, unit:"lbs".
+- When sets have different reps (e.g. "12, 10 y 10"), create one set object per rep count.
+- Handle any language, accented characters (á é í ó ú ñ), parentheses, commas, and mixed units.
+- Translate exercise names to English.
+- Use 0 for unknown weight or duration.
+- assumptions array must be non-empty — always document what you assumed.`,
       },
     ],
   });

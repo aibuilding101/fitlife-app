@@ -166,17 +166,18 @@ function NutritionTab({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
   const [success, setSuccess] = useState("");
+  const [assumptions, setAssumptions] = useState<string[]>([]);
+  const [showAssumptions, setShowAssumptions] = useState(false);
 
   const handleParse = async () => {
     if (!input.trim()) { setError("Ingresa lo que comiste"); return; }
-    setLoading(true); setError(""); setSuccess("");
+    setLoading(true); setError(""); setSuccess(""); setAssumptions([]); setShowAssumptions(false);
     try {
       const res = await fetch("/api/parse-nutrition", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
-      if (result.questions?.length) { setError(`Clarifica: ${result.questions.join(", ")}`); return; }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
       const today = new Date().toISOString().split("T")[0];
@@ -186,7 +187,8 @@ function NutritionTab({ userId }: { userId: string }) {
         fat_g: result.macros.fat_g, calories: result.macros.calories,
       });
       if (dbErr) throw dbErr;
-      setSuccess(`P ${result.macros.protein_g}g · C ${result.macros.carbs_g}g · G ${result.macros.fat_g}g · ${Math.round(result.macros.calories)} kcal`);
+      setSuccess(`✅ Guardado! P: ${result.macros.protein_g}g | C: ${result.macros.carbs_g}g | G: ${result.macros.fat_g}g | ${Math.round(result.macros.calories)} kcal`);
+      setAssumptions(result.assumptions || []);
       setInput("");
     } catch (err: any) { setError(err.message); } finally { setLoading(false); }
   };
@@ -201,30 +203,61 @@ function NutritionTab({ userId }: { userId: string }) {
       <button onClick={handleParse} className="btn btn-primary" disabled={loading} style={{ marginBottom: "16px" }}>
         {loading ? "Analizando..." : "Parsear con IA"}
       </button>
-      {error   && <div className="error">{error}</div>}
-      {success && <div className="success-banner">{success}</div>}
+      {error && <div className="error">{error}</div>}
+      {success && (
+        <div className="success-banner">
+          {success}
+          {assumptions.length > 0 && (
+            <>
+              {"\n"}
+              <button
+                onClick={() => setShowAssumptions(p => !p)}
+                style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11px", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+              >
+                📝 {showAssumptions ? "Ocultar" : "Ver"} asunciones ({assumptions.length})
+              </button>
+              {showAssumptions && (
+                <div style={{ marginTop: "8px", opacity: 0.8 }}>
+                  {assumptions.map((a, i) => <div key={i}>· {a}</div>)}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Workout tab ───────────────────────────────────────────────────────────────
 
+function formatExerciseLine(ex: any): string {
+  const sets: any[] = ex.sets || [];
+  if (!sets.length) return ex.name;
+  const unit = sets[0]?.unit || "lbs";
+  const weight = sets[0]?.weight > 0 ? ` @ ${sets[0].weight}${unit}` : "";
+  const allSameReps = sets.every((s: any) => s.reps === sets[0].reps);
+  const repStr = allSameReps ? `${sets.length}×${sets[0].reps}` : sets.map((s: any) => s.reps).join(", ") + " reps";
+  return `${ex.name}: ${repStr}${weight}`;
+}
+
 function WorkoutTab({ userId }: { userId: string }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
   const [success, setSuccess] = useState("");
+  const [assumptions, setAssumptions] = useState<string[]>([]);
+  const [showAssumptions, setShowAssumptions] = useState(false);
 
   const handleParse = async () => {
     if (!input.trim()) { setError("Ingresa tu entrenamiento"); return; }
-    setLoading(true); setError(""); setSuccess("");
+    setLoading(true); setError(""); setSuccess(""); setAssumptions([]); setShowAssumptions(false);
     try {
       const res = await fetch("/api/parse-workout", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
-      if (result.questions?.length) { setError(`Clarifica: ${result.questions.join(", ")}`); return; }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
       const today = new Date().toISOString().split("T")[0];
@@ -233,7 +266,9 @@ function WorkoutTab({ userId }: { userId: string }) {
         exercises: result.exercises, duration_minutes: result.duration_minutes,
       });
       if (dbErr) throw dbErr;
-      setSuccess(result.exercises.map((e: any) => e.name).join(" · "));
+      const lines = (result.exercises || []).map((e: any) => `- ${formatExerciseLine(e)}`).join("\n");
+      setSuccess(`✅ Entrenamiento guardado!\n${lines}`);
+      setAssumptions(result.assumptions || []);
       setInput("");
     } catch (err: any) { setError(err.message); } finally { setLoading(false); }
   };
@@ -248,8 +283,28 @@ function WorkoutTab({ userId }: { userId: string }) {
       <button onClick={handleParse} className="btn btn-primary" disabled={loading} style={{ marginBottom: "16px" }}>
         {loading ? "Analizando..." : "Parsear con IA"}
       </button>
-      {error   && <div className="error">{error}</div>}
-      {success && <div className="success-banner">{success}</div>}
+      {error && <div className="error">{error}</div>}
+      {success && (
+        <div className="success-banner">
+          {success}
+          {assumptions.length > 0 && (
+            <>
+              {"\n"}
+              <button
+                onClick={() => setShowAssumptions(p => !p)}
+                style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11px", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+              >
+                📝 {showAssumptions ? "Ocultar" : "Ver"} asunciones ({assumptions.length})
+              </button>
+              {showAssumptions && (
+                <div style={{ marginTop: "8px", opacity: 0.8 }}>
+                  {assumptions.map((a, i) => <div key={i}>· {a}</div>)}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
