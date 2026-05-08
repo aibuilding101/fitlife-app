@@ -277,8 +277,92 @@ function MeasurementsTab({ userId }: { userId: string }) {
 }
 
 function RecoveryTab() {
+  const [hours, setHours] = useState("");
+  const [quality, setQuality] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [recent, setRecent] = useState<any[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(true);
+
+  const loadRecent = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data } = await supabase.from("sleep_logs").select("*").eq("user_id", session.user.id).order("date", { ascending: false }).limit(7);
+      setRecent(data || []);
+    } catch (e) { console.error(e); } finally { setLoadingRecent(false); }
+  };
+
+  useEffect(() => { loadRecent(); }, []);
+
+  const handleSave = async () => {
+    if (!hours) { setError("Enter hours slept"); return; }
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      const today = new Date().toISOString().split("T")[0];
+      const payload: any = { user_id: session.user.id, date: today, hours_slept: parseFloat(hours) };
+      if (quality) payload.quality = parseInt(quality);
+      if (notes.trim()) payload.notes = notes.trim();
+      const { error: dbError } = await supabase.from("sleep_logs").insert(payload);
+      if (dbError) throw dbError;
+      const parts = [`${hours}h`];
+      if (quality) parts.push(`Calidad: ${quality}/5`);
+      setSuccess(`✅ Guardado! ${parts.join(" | ")}`);
+      setHours(""); setQuality(""); setNotes("");
+      loadRecent();
+    } catch (err: any) { setError(err.message); } finally { setLoading(false); }
+  };
+
+  const qualityLabel = (q: number) => ["", "Muy malo", "Malo", "Regular", "Bueno", "Excelente"][q] || "--";
+
   return <div style={{ background: "white", padding: "30px", borderRadius: "8px" }}>
-    <h3>Recovery</h3>
-    <p>Whoop integration coming soon...</p>
+    <h3 style={{ marginTop: 0, marginBottom: "24px" }}>Registrar Sueño</h3>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+      <div className="form-group" style={{ margin: 0 }}>
+        <label>Horas dormidas</label>
+        <input type="number" step="0.5" min="0" max="24" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="ej. 7.5" />
+      </div>
+      <div className="form-group" style={{ margin: 0 }}>
+        <label>Calidad (1–5)</label>
+        <select value={quality} onChange={(e) => setQuality(e.target.value)} style={{ width: "100%" }}>
+          <option value="">— Seleccionar —</option>
+          <option value="1">1 – Muy malo</option>
+          <option value="2">2 – Malo</option>
+          <option value="3">3 – Regular</option>
+          <option value="4">4 – Bueno</option>
+          <option value="5">5 – Excelente</option>
+        </select>
+      </div>
+    </div>
+    <div className="form-group" style={{ marginBottom: "16px" }}>
+      <label>Notas (opcional)</label>
+      <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="ej. me desperté varias veces..." style={{ minHeight: "70px" }} />
+    </div>
+    <button onClick={handleSave} className="btn btn-primary" disabled={loading} style={{ marginBottom: "16px" }}>{loading ? "Guardando..." : "Guardar"}</button>
+    {error && <div className="error" style={{ marginBottom: "16px" }}>{error}</div>}
+    {success && <div style={{ color: "#22863a", background: "#f6ffed", padding: "12px", borderRadius: "4px", marginBottom: "24px" }}>{success}</div>}
+    <h4 style={{ marginBottom: "12px" }}>Últimas 7 entradas</h4>
+    {loadingRecent ? <div className="loading"></div> : recent.length === 0 ? <p style={{ color: "#888" }}>No hay registros de sueño.</p> : (
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+        <thead><tr style={{ borderBottom: "1px solid #e0e0e0" }}>
+          <th style={{ textAlign: "left", padding: "8px 0", color: "#888", fontWeight: "normal" }}>Fecha</th>
+          <th style={{ textAlign: "right", padding: "8px 0", color: "#888", fontWeight: "normal" }}>Horas</th>
+          <th style={{ textAlign: "right", padding: "8px 0", color: "#888", fontWeight: "normal" }}>Calidad</th>
+          <th style={{ textAlign: "right", padding: "8px 0", color: "#888", fontWeight: "normal" }}>Notas</th>
+        </tr></thead>
+        <tbody>{recent.map((s, i) => (
+          <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
+            <td style={{ padding: "10px 0" }}>{s.date}</td>
+            <td style={{ textAlign: "right", padding: "10px 0" }}>{s.hours_slept ?? "--"}</td>
+            <td style={{ textAlign: "right", padding: "10px 0" }}>{s.quality ? qualityLabel(s.quality) : "--"}</td>
+            <td style={{ textAlign: "right", padding: "10px 0", color: "#888", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.notes || ""}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    )}
   </div>;
 }

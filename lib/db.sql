@@ -59,6 +59,17 @@ CREATE TABLE IF NOT EXISTS measurements (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Sleep Logs
+CREATE TABLE IF NOT EXISTS sleep_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  hours_slept DECIMAL(4,2),
+  quality INTEGER CHECK (quality BETWEEN 1 AND 5),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Activity Log (Track which days user logged data)
 CREATE TABLE IF NOT EXISTS activity_log (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -72,6 +83,7 @@ CREATE TABLE IF NOT EXISTS activity_log (
 CREATE INDEX idx_nutrition_user_date ON nutrition_logs(user_id, date DESC);
 CREATE INDEX idx_workout_user_date ON workout_logs(user_id, date DESC);
 CREATE INDEX idx_measurements_user_date ON measurements(user_id, date DESC);
+CREATE INDEX idx_sleep_user_date ON sleep_logs(user_id, date DESC);
 CREATE INDEX idx_goals_user ON goals(user_id);
 CREATE INDEX idx_activity_user ON activity_log(user_id);
 
@@ -81,6 +93,7 @@ ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE nutrition_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workout_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE measurements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sleep_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies (All tables follow same pattern)
@@ -126,6 +139,14 @@ CREATE POLICY "Users can view own measurements"
 
 CREATE POLICY "Users can manage own measurements"
   ON measurements FOR ALL
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own sleep"
+  ON sleep_logs FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage own sleep"
+  ON sleep_logs FOR ALL
   USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can view own activity"
