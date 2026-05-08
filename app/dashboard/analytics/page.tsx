@@ -11,6 +11,7 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -20,8 +21,16 @@ export default function AnalyticsPage() {
         const res = await fetch("/api/get-analytics", {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        if (res.ok) setData(await res.json());
-      } catch (e) { console.error(e); } finally { setLoading(false); }
+        if (res.ok) {
+          setData(await res.json());
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setApiError(err.error || `Error ${res.status} cargando analytics`);
+        }
+      } catch (e: any) {
+        setApiError(e.message || "Error de red");
+        console.error(e);
+      } finally { setLoading(false); }
     })();
   }, [router]);
 
@@ -29,7 +38,7 @@ export default function AnalyticsPage() {
     <div className="loading-center" style={{ minHeight: "60vh" }}><div className="loading" /></div>
   );
 
-  if (!data?.hasData) return (
+  if (apiError || !data?.hasData) return (
     <>
       <div className="page-header">
         <div>
@@ -37,14 +46,18 @@ export default function AnalyticsPage() {
           <h1 className="page-title">Analytics</h1>
         </div>
       </div>
-      <div className="content-card" style={{ textAlign: "center", padding: "60px 32px" }}>
-        <p style={{ fontFamily: "'Fraunces', serif", fontSize: "20px", color: "var(--text)", marginBottom: "10px" }}>
-          Sin datos todavía
-        </p>
-        <p style={{ color: "var(--muted)", fontSize: "14px" }}>
-          Registra entrenamientos en el Overview para ver analytics.
-        </p>
-      </div>
+      {apiError ? (
+        <div className="error" style={{ marginBottom: "16px" }}>{apiError}</div>
+      ) : (
+        <div className="content-card" style={{ textAlign: "center", padding: "60px 32px" }}>
+          <p style={{ fontFamily: "'Fraunces', serif", fontSize: "20px", color: "var(--text)", marginBottom: "10px" }}>
+            Sin datos todavía
+          </p>
+          <p style={{ color: "var(--muted)", fontSize: "14px" }}>
+            Registra entrenamientos en el Overview para ver analytics.
+          </p>
+        </div>
+      )}
     </>
   );
 
@@ -120,7 +133,7 @@ export default function AnalyticsPage() {
                   cursor={{ fill: "rgba(255,107,107,0.04)" }}
                   formatter={(v: any) => [v.toLocaleString(), "Volumen"]}
                 />
-                <Bar dataKey="volume" fill="var(--accent)" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="volume" fill="#FF6B6B" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

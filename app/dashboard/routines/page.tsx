@@ -38,7 +38,8 @@ export default function RoutinesPage() {
     <div className="loading-center" style={{ minHeight: "60vh" }}><div className="loading" /></div>
   );
 
-  const { routines = [], suggestions = [] } = data || {};
+  const { suggestions = [] } = data || {};
+  const routines = (data?.routines || []).filter((r: any) => r.sessionCount > 0);
 
   return (
     <>
@@ -184,7 +185,7 @@ function RoutineCard({ routine: r, expanded, onToggle, quickLog, onToggleQuickLo
                       contentStyle={{ background: "#1c2521", border: "1px solid #2a3530", borderRadius: "8px", color: "#e8efea", fontSize: "12px" }}
                       cursor={{ fill: "rgba(255,107,107,0.04)" }}
                     />
-                    <Bar dataKey="volume" fill="var(--accent)" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="volume" fill="#FF6B6B" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -287,9 +288,23 @@ function QuickLogForm({ routine, onClose, onSaved }: {
     </div>
   );
 
+  const todayLabel = new Date().toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  if (!entries.length) return (
+    <div style={{ borderTop: "1px solid var(--border)", padding: "24px 28px" }}>
+      <p style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "12px" }}>
+        Esta rutina no tiene ejercicios registrados. Primero registra un entrenamiento desde el Overview para ver los ejercicios aquí.
+      </p>
+      <button className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+    </div>
+  );
+
   return (
     <div style={{ borderTop: "1px solid var(--border)", padding: "24px 28px" }}>
-      <div className="section-label" style={{ margin: "0 0 16px" }}>Log rápido — edita los pesos</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div className="section-label" style={{ margin: 0 }}>Log rápido — edita los pesos</div>
+        <span style={{ fontSize: "12px", color: "var(--muted)" }}>📅 {todayLabel}</span>
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px 80px 70px", gap: "8px" }}>
           {["Ejercicio","Series","Reps","Peso","Unidad"].map(h => (

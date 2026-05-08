@@ -24,14 +24,24 @@ export default function BodyPage() {
 
   const [editId, setEditId]     = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [apiError, setApiError] = useState("");
 
   const loadData = async () => {
+    setApiError("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push("/auth/login"); return; }
       const res = await fetch("/api/get-body", { headers: { Authorization: `Bearer ${session.access_token}` } });
-      if (res.ok) setData(await res.json());
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+      if (res.ok) {
+        setData(await res.json());
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setApiError(err.error || `Error ${res.status} cargando datos`);
+      }
+    } catch (e: any) {
+      setApiError(e.message || "Error de red");
+      console.error(e);
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { loadData(); }, [router]);
@@ -118,6 +128,8 @@ export default function BodyPage() {
         </div>
         {measurements?.length > 0 && <span className="page-date">{measurements.length} mediciones</span>}
       </div>
+
+      {apiError && <div className="error" style={{ marginBottom: "16px" }}>{apiError}</div>}
 
       {/* Log form */}
       <div className="content-card" style={{ marginBottom: "20px" }}>
