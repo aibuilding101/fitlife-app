@@ -10,10 +10,15 @@ interface DashboardData {
   proteinToday: number;
   caloriestoday: number;
   carbsToday: number;
+  fatToday: number;
   workoutsThisWeek: number;
   bodyFatPercent: number | null;
   weightKg: number | null;
   targetWeightKg: number | null;
+  targetCalories: number;
+  targetProtein: number;
+  targetCarbs: number;
+  targetFat: number;
 }
 
 const INNER_TABS = ["Nutrition", "Workout", "Measurements", "Progress", "Recovery"];
@@ -21,8 +26,9 @@ const INNER_TABS = ["Nutrition", "Workout", "Measurements", "Progress", "Recover
 export default function Dashboard() {
   const router = useRouter();
   const [data, setData] = useState<DashboardData>({
-    userName: "User", proteinToday: 0, caloriestoday: 0, carbsToday: 0,
+    userName: "User", proteinToday: 0, caloriestoday: 0, carbsToday: 0, fatToday: 0,
     workoutsThisWeek: 0, bodyFatPercent: null, weightKg: null, targetWeightKg: null,
+    targetCalories: 2300, targetProtein: 200, targetCarbs: 250, targetFat: 65,
   });
   const [loading, setLoading]   = useState(true);
   const [activeTab, setActiveTab] = useState("Nutrition");
@@ -35,40 +41,40 @@ export default function Dashboard() {
         if (!session) { router.push("/auth/login"); return; }
         setUserId(session.user.id);
 
-        const { data: profile } = await supabase.from("user_profiles").select("*")
-          .eq("user_id", session.user.id).single();
+        const [profileRes, nutritionRes, workoutsRes, measurementsRes] = await Promise.all([
+          supabase.from("user_profiles").select("*").eq("user_id", session.user.id).single(),
+          supabase.from("nutrition_logs").select("*").eq("user_id", session.user.id).eq("date", new Date().toISOString().split("T")[0]),
+          supabase.from("workout_logs").select("date").eq("user_id", session.user.id).gte("date", (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().split("T")[0]; })()),
+          supabase.from("measurements").select("*").eq("user_id", session.user.id).order("date", { ascending: false }).limit(1),
+        ]);
+
+        const profile = profileRes.data;
         const userName = profile?.name || session.user.email?.split("@")[0] || "User";
 
-        const today = new Date().toISOString().split("T")[0];
-        const { data: nutrition } = await supabase.from("nutrition_logs").select("*")
-          .eq("user_id", session.user.id).eq("date", today);
+        const nutrition = nutritionRes.data || [];
+        const proteinToday  = nutrition.reduce((s: number, l: any) => s + (l.protein_g || 0), 0);
+        const caloriestoday = nutrition.reduce((s: number, l: any) => s + (l.calories   || 0), 0);
+        const carbsToday    = nutrition.reduce((s: number, l: any) => s + (l.carbs_g    || 0), 0);
+        const fatToday      = nutrition.reduce((s: number, l: any) => s + (l.fat_g      || 0), 0);
 
-        let proteinToday = 0, caloriestoday = 0, carbsToday = 0;
-        if (nutrition?.length) {
-          proteinToday  = nutrition.reduce((s, l) => s + (l.protein_g || 0), 0);
-          caloriestoday = nutrition.reduce((s, l) => s + (l.calories   || 0), 0);
-          carbsToday    = nutrition.reduce((s, l) => s + (l.carbs_g    || 0), 0);
-        }
-
-        const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-        const { data: workoutsWeek } = await supabase.from("workout_logs").select("date")
-          .eq("user_id", session.user.id).gte("date", weekAgo.toISOString().split("T")[0]);
-        const workoutsThisWeek = workoutsWeek?.length || 0;
-
-        const { data: measurements } = await supabase.from("measurements").select("*")
-          .eq("user_id", session.user.id).order("date", { ascending: false }).limit(1);
+        const workoutsThisWeek = workoutsRes.data?.length || 0;
 
         let bodyFatPercent: number | null = null;
         let weightKg: number | null = null;
         const targetWeightKg: number | null = profile?.target_weight_kg || null;
-        if (measurements?.length) {
-          const m = measurements[0];
+        if (measurementsRes.data?.length) {
+          const m = measurementsRes.data[0];
           if (m.body_fat_percent) bodyFatPercent = m.body_fat_percent;
           if (m.weight_kg)        weightKg = m.weight_kg;
         }
 
-        setData({ userName, proteinToday, caloriestoday, carbsToday, workoutsThisWeek,
-          bodyFatPercent, weightKg, targetWeightKg });
+        const targetCalories = profile?.macro_target_calories || 2300;
+        const targetProtein  = profile?.macro_target_protein  || 200;
+        const targetCarbs    = profile?.macro_target_carbs    || 250;
+        const targetFat      = profile?.macro_target_fat      || 65;
+
+        setData({ userName, proteinToday, caloriestoday, carbsToday, fatToday, workoutsThisWeek,
+          bodyFatPercent, weightKg, targetWeightKg, targetCalories, targetProtein, targetCarbs, targetFat });
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     };
@@ -81,10 +87,11 @@ export default function Dashboard() {
     </div>
   );
 
-  const pct = (v: number, max: number) => Math.min(100, (v / max) * 100);
-  const proteinPct  = pct(data.proteinToday, 200);
-  const calPct      = pct(data.caloriestoday, 2300);
-  const carbsPct    = pct(data.carbsToday, 250);
+  const pct = (v: number, max: number) => max > 0 ? Math.min(100, (v / max) * 100) : 0;
+  const proteinPct  = pct(data.proteinToday,  data.targetProtein);
+  const calPct      = pct(data.caloriestoday, data.targetCalories);
+  const carbsPct    = pct(data.carbsToday,    data.targetCarbs);
+  const fatPct      = pct(data.fatToday,      data.targetFat);
   const workoutPct  = pct(data.workoutsThisWeek, 5);
   const bodyFatPct  = data.bodyFatPercent ? pct(data.bodyFatPercent, 30) : 0;
   const weightPct   = data.weightKg && data.targetWeightKg
@@ -104,13 +111,11 @@ export default function Dashboard() {
       </div>
 
       <div className="stats-grid">
-        <StatCard label="Proteína"       value={`${Math.round(data.proteinToday)}`}  unit="g"    meta="de 200g"    pct={proteinPct}  color="var(--accent)" />
-        <StatCard label="Calorías"       value={`${Math.round(data.caloriestoday)}`} unit="kcal" meta="de 2300"    pct={calPct}      color="var(--accent)" />
-        <StatCard label="Carbohidratos"  value={`${Math.round(data.carbsToday)}`}    unit="g"    meta="de 250g"    pct={carbsPct}    color="var(--amber)"  />
-        <StatCard label="Entrenos"        value={`${data.workoutsThisWeek}`}           unit="/5"   meta="esta semana" pct={workoutPct}  color="var(--accent)" />
-        <StatCard label="Grasa Corporal"
-          value={data.bodyFatPercent ? `${data.bodyFatPercent}` : "--"} unit="%"
-          meta="meta: 9%" pct={bodyFatPct} color="var(--coral)" />
+        <StatCard label="Proteína"      value={`${Math.round(data.proteinToday)}`}  unit="g"    meta={`de ${data.targetProtein}g`}       pct={proteinPct}  color="var(--accent)" />
+        <StatCard label="Calorías"      value={`${Math.round(data.caloriestoday)}`} unit="kcal" meta={`de ${data.targetCalories}`}       pct={calPct}      color="var(--accent)" />
+        <StatCard label="Carbohidratos" value={`${Math.round(data.carbsToday)}`}    unit="g"    meta={`de ${data.targetCarbs}g`}         pct={carbsPct}    color="var(--amber)"  />
+        <StatCard label="Grasas"        value={`${Math.round(data.fatToday)}`}      unit="g"    meta={`de ${data.targetFat}g`}           pct={fatPct}      color="var(--coral)"  />
+        <StatCard label="Entrenos"      value={`${data.workoutsThisWeek}`}           unit="/5"   meta="esta semana"                      pct={workoutPct}  color="var(--accent)" />
         <StatCard label="Peso"
           value={data.weightKg ? `${data.weightKg}` : "--"} unit="kg"
           meta={data.targetWeightKg ? `meta: ${data.targetWeightKg} kg` : "sin meta"}

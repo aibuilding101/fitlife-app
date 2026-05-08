@@ -8,7 +8,7 @@ export default function Home() {
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(125,240,168,0.07) 0%, transparent 60%), #0a0e0c",
+      background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,107,107,0.07) 0%, transparent 60%), #0a0e0c",
       padding: "40px 20px",
       textAlign: "center",
     }}>
@@ -16,7 +16,7 @@ export default function Home() {
         Your fitness OS
       </p>
       <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(48px, 8vw, 76px)", fontWeight: 600, letterSpacing: "-2px", color: "#e8efea", lineHeight: 1.05, marginBottom: "20px" }}>
-        FitLife<span style={{ color: "#7df0a8" }}>.</span>
+        FitLife<span style={{ color: "#FF6B6B" }}>.</span>
       </h1>
       <p style={{ fontSize: "16px", color: "#8a9590", maxWidth: "420px", lineHeight: 1.6, marginBottom: "44px" }}>
         Track training, nutrition, and recovery — all in one elegant place.

@@ -78,7 +78,10 @@ export default function BodyPage() {
         setSuccess("Medida actualizada.");
       } else {
         const { error: dbErr } = await supabase.from("measurements").insert(payload);
-        if (dbErr) throw dbErr;
+        if (dbErr) {
+          if (dbErr.code === "23505") throw new Error("Tu base de datos tiene un índice único por fecha. Ejecuta este SQL en Supabase: ALTER TABLE measurements DROP CONSTRAINT IF EXISTS measurements_user_date_unique;");
+          throw dbErr;
+        }
         setSuccess("Medida guardada.");
       }
       clearForm(); await loadData();
