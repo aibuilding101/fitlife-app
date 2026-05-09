@@ -1,14 +1,22 @@
 import { supabaseServer } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
-function calculateMacros(weight_kg: number, height_cm: number, age: number, activity: string, goal: string) {
-  const bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + 5;
+function calculateMacros(
+  weight_kg: number, height_cm: number, age: number,
+  activity: string, goal: string, sex: string = "male"
+) {
+  const sexOffset = sex === "female" ? -161 : 5;
+  const bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + sexOffset;
   const multipliers: Record<string, number> = {
     sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9,
   };
   const tdee = bmr * (multipliers[activity] ?? 1.55);
-  const calories = goal === "CUT" ? tdee - 500 : goal === "BULK" ? tdee + 300 : tdee;
-  const protein_g = Math.round(weight_kg * 2.205 * 1.0);
+  const calories =
+    goal === "CUT"    ? tdee - 500 :
+    goal === "BULK"   ? tdee + 300 :
+    tdee; // MAINT and RECOMP both use TDEE
+  const proteinMultiplier = goal === "RECOMP" ? 2.4 : 2.2;
+  const protein_g = Math.round(weight_kg * proteinMultiplier);
   const fat_g = Math.round((calories * 0.25) / 9);
   const carbs_g = Math.round((calories - protein_g * 4 - fat_g * 9) / 4);
   return {
@@ -83,6 +91,7 @@ export async function GET(request: NextRequest) {
         activity_level: profile?.activity_level,
         goal: profile?.goal,
         weight_kg: profile?.weight_kg,
+        sex: profile?.sex,
       },
       targets,
       today: todayTotals,
@@ -102,7 +111,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
-    const { height_cm, age, activity_level, goal, weight_kg } = body;
+    const { height_cm, age, activity_level, goal, weight_kg, sex, body_fat_percent } = body;
 
     if (!height_cm || !age || !activity_level || !goal || !weight_kg) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -110,10 +119,10 @@ export async function POST(request: NextRequest) {
 
     const macros = calculateMacros(
       parseFloat(weight_kg), parseFloat(height_cm),
-      parseInt(age), activity_level, goal
+      parseInt(age), activity_level, goal, sex || "male"
     );
 
-    const { error: upsertErr } = await supabase.from("user_profiles").upsert({
+    const profilePayload: any = {
       user_id: user.id,
       height_cm: parseFloat(height_cm),
       age: parseInt(age),
@@ -124,7 +133,13 @@ export async function POST(request: NextRequest) {
       macro_target_protein: macros.protein_g,
       macro_target_carbs: macros.carbs_g,
       macro_target_fat: macros.fat_g,
-    }, { onConflict: "user_id" });
+    };
+    if (sex) profilePayload.sex = sex;
+    if (body_fat_percent) profilePayload.body_fat_percent = parseFloat(body_fat_percent);
+
+    const { error: upsertErr } = await supabase.from("user_profiles").upsert(
+      profilePayload, { onConflict: "user_id" }
+    );
 
     if (upsertErr) throw upsertErr;
     return NextResponse.json({ macros });

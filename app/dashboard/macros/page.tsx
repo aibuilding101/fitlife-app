@@ -13,9 +13,10 @@ const ACTIVITY_OPTIONS = [
 ];
 
 const GOAL_OPTIONS = [
-  { value: "CUT",  label: "Definición (CUT) — déficit 500 kcal", color: "var(--coral)" },
-  { value: "MAINT",label: "Mantenimiento (MAINT)", color: "var(--amber)" },
-  { value: "BULK", label: "Volumen (BULK) — +300 kcal", color: "var(--accent)" },
+  { value: "CUT",    label: "Definición (CUT) — déficit 500 kcal", color: "var(--coral)"  },
+  { value: "RECOMP", label: "Recomposición — perder grasa y ganar músculo", color: "#a78bfa" },
+  { value: "MAINT",  label: "Mantenimiento (MAINT)", color: "var(--amber)"  },
+  { value: "BULK",   label: "Volumen (BULK) — +300 kcal", color: "var(--accent)" },
 ];
 
 export default function MacrosPage() {
@@ -32,6 +33,8 @@ export default function MacrosPage() {
   const [activity, setActivity] = useState("moderate");
   const [goal, setGoal]     = useState("CUT");
   const [weight, setWeight] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const loadData = async () => {
     try {
@@ -72,6 +75,20 @@ export default function MacrosPage() {
       if (!res.ok) throw new Error(result.error);
       setSaveSuccess(true); setShowSetup(false); await loadData();
     } catch (e: any) { setError(e.message); } finally { setSaving(false); }
+  };
+
+  const handleDeleteAll = async () => {
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      await fetch("/api/delete-data", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      setDeleteConfirm(false);
+      await loadData();
+    } catch (e: any) { setError(e.message); } finally { setDeleting(false); }
   };
 
   if (loading) return (
@@ -223,6 +240,40 @@ export default function MacrosPage() {
           </div>
         </>
       )}
+
+      {/* Danger zone */}
+      <div style={{ marginTop: "32px", padding: "20px 24px", border: "1px solid rgba(255,118,112,0.2)", borderRadius: "var(--r-lg)", background: "rgba(255,118,112,0.03)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+          <div>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--coral)", marginBottom: "3px" }}>Borrar todos mis datos</div>
+            <div style={{ fontSize: "12px", color: "var(--muted)" }}>Elimina comidas, entrenamientos y medidas. Irreversible.</div>
+          </div>
+          {deleteConfirm ? (
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={handleDeleteAll}
+                disabled={deleting}
+                style={{ padding: "8px 16px", borderRadius: "var(--r-md)", border: "1px solid var(--coral)", background: "rgba(255,118,112,0.12)", color: "var(--coral)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+              >
+                {deleting ? "Borrando..." : "Confirmar"}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                style={{ padding: "8px 16px", borderRadius: "var(--r-md)", border: "1px solid var(--border)", background: "none", color: "var(--muted)", fontSize: "12px", cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              style={{ padding: "8px 16px", borderRadius: "var(--r-md)", border: "1px solid rgba(255,118,112,0.3)", background: "none", color: "var(--coral)", fontSize: "12px", fontWeight: 500, cursor: "pointer" }}
+            >
+              Borrar datos
+            </button>
+          )}
+        </div>
+      </div>
     </>
   );
 }

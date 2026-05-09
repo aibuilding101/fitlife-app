@@ -173,6 +173,22 @@ function NutritionTab({ userId }: { userId: string }) {
   const [success, setSuccess] = useState("");
   const [assumptions, setAssumptions] = useState<string[]>([]);
   const [showAssumptions, setShowAssumptions] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const loadHistory = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data } = await supabase.from("nutrition_logs")
+        .select("*").eq("user_id", session.user.id)
+        .order("created_at", { ascending: false }).limit(30);
+      setHistory(data || []);
+    } catch (e) { console.error(e); } finally { setLoadingHistory(false); }
+  };
+
+  useEffect(() => { loadHistory(); }, []);
 
   const handleParse = async () => {
     if (!input.trim()) { setError("Ingresa lo que comiste"); return; }
@@ -195,41 +211,99 @@ function NutritionTab({ userId }: { userId: string }) {
       setSuccess(`✅ Guardado! P: ${result.macros.protein_g}g | C: ${result.macros.carbs_g}g | G: ${result.macros.fat_g}g | ${Math.round(result.macros.calories)} kcal`);
       setAssumptions(result.assumptions || []);
       setInput("");
+      loadHistory();
     } catch (err: any) { setError(err.message); } finally { setLoading(false); }
   };
 
+  const handleDelete = async (id: string) => {
+    await supabase.from("nutrition_logs").delete().eq("id", id);
+    setDeleteId(null);
+    loadHistory();
+  };
+
+  const fmtDate = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+
   return (
-    <div className="content-card">
-      <h3 className="card-title">Registrar Nutrición</h3>
-      <div className="form-group">
-        <label>¿Qué comiste?</label>
-        <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Describe tu comida..." style={{ minHeight: "96px" }} />
-      </div>
-      <button onClick={handleParse} className="btn btn-primary" disabled={loading} style={{ marginBottom: "16px" }}>
-        {loading ? "Analizando..." : "Parsear con IA"}
-      </button>
-      {error && <div className="error">{error}</div>}
-      {success && (
-        <div className="success-banner">
-          {success}
-          {assumptions.length > 0 && (
-            <>
-              {"\n"}
-              <button
-                onClick={() => setShowAssumptions(p => !p)}
-                style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11px", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-              >
-                📝 {showAssumptions ? "Ocultar" : "Ver"} asunciones ({assumptions.length})
-              </button>
-              {showAssumptions && (
-                <div style={{ marginTop: "8px", opacity: 0.8 }}>
-                  {assumptions.map((a, i) => <div key={i}>· {a}</div>)}
-                </div>
-              )}
-            </>
-          )}
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div className="content-card">
+        <h3 className="card-title">Registrar Nutrición</h3>
+        <div className="form-group">
+          <label>¿Qué comiste?</label>
+          <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Describe tu comida..." style={{ minHeight: "96px" }} />
         </div>
-      )}
+        <button onClick={handleParse} className="btn btn-primary" disabled={loading} style={{ marginBottom: "16px" }}>
+          {loading ? "Analizando..." : "Parsear con IA"}
+        </button>
+        {error && <div className="error">{error}</div>}
+        {success && (
+          <div className="success-banner">
+            {success}
+            {assumptions.length > 0 && (
+              <>
+                {"\n"}
+                <button
+                  onClick={() => setShowAssumptions(p => !p)}
+                  style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11px", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                >
+                  📝 {showAssumptions ? "Ocultar" : "Ver"} asunciones ({assumptions.length})
+                </button>
+                {showAssumptions && (
+                  <div style={{ marginTop: "8px", opacity: 0.8 }}>
+                    {assumptions.map((a, i) => <div key={i}>· {a}</div>)}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="content-card">
+        <h3 className="card-title">Historial de comidas</h3>
+        {loadingHistory ? (
+          <div className="loading-center"><div className="loading" /></div>
+        ) : history.length === 0 ? (
+          <p className="empty-state">Sin comidas registradas todavía.</p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Comida</th>
+                  <th>Kcal</th>
+                  <th>P</th>
+                  <th>C</th>
+                  <th>G</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h: any) => (
+                  <tr key={h.id}>
+                    <td style={{ color: "var(--text)", whiteSpace: "nowrap" }}>{fmtDate(h.date)}</td>
+                    <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.raw_input || "—"}</td>
+                    <td>{Math.round(h.calories || 0)}</td>
+                    <td>{Math.round(h.protein_g || 0)}g</td>
+                    <td>{Math.round(h.carbs_g || 0)}g</td>
+                    <td>{Math.round(h.fat_g || 0)}g</td>
+                    <td style={{ textAlign: "right" }}>
+                      {deleteId === h.id ? (
+                        <span style={{ fontSize: "12px" }}>
+                          <button onClick={() => handleDelete(h.id)} style={{ color: "var(--coral)", background: "none", border: "none", cursor: "pointer", marginRight: "8px", fontSize: "12px" }}>Confirmar</button>
+                          <button onClick={() => setDeleteId(null)} style={{ color: "var(--muted)", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Cancelar</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setDeleteId(h.id)} style={{ color: "var(--coral)", background: "none", border: "none", cursor: "pointer", fontSize: "13px" }}>×</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -253,6 +327,23 @@ function WorkoutTab({ userId }: { userId: string }) {
   const [success, setSuccess] = useState("");
   const [assumptions, setAssumptions] = useState<string[]>([]);
   const [showAssumptions, setShowAssumptions] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const loadHistory = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data } = await supabase.from("workout_logs")
+        .select("*").eq("user_id", session.user.id)
+        .order("created_at", { ascending: false }).limit(30);
+      setHistory(data || []);
+    } catch (e) { console.error(e); } finally { setLoadingHistory(false); }
+  };
+
+  useEffect(() => { loadHistory(); }, []);
 
   const handleParse = async () => {
     if (!input.trim()) { setError("Ingresa tu entrenamiento"); return; }
@@ -275,41 +366,110 @@ function WorkoutTab({ userId }: { userId: string }) {
       setSuccess(`✅ Entrenamiento guardado!\n${lines}`);
       setAssumptions(result.assumptions || []);
       setInput("");
+      loadHistory();
     } catch (err: any) { setError(err.message); } finally { setLoading(false); }
   };
 
+  const handleDelete = async (id: string) => {
+    await supabase.from("workout_logs").delete().eq("id", id);
+    setDeleteId(null);
+    loadHistory();
+  };
+
+  const fmtDate = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+
   return (
-    <div className="content-card">
-      <h3 className="card-title">Registrar Entrenamiento</h3>
-      <div className="form-group">
-        <label>¿Qué ejercicios hiciste?</label>
-        <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Describe tu entrenamiento..." style={{ minHeight: "96px" }} />
-      </div>
-      <button onClick={handleParse} className="btn btn-primary" disabled={loading} style={{ marginBottom: "16px" }}>
-        {loading ? "Analizando..." : "Parsear con IA"}
-      </button>
-      {error && <div className="error">{error}</div>}
-      {success && (
-        <div className="success-banner">
-          {success}
-          {assumptions.length > 0 && (
-            <>
-              {"\n"}
-              <button
-                onClick={() => setShowAssumptions(p => !p)}
-                style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11px", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-              >
-                📝 {showAssumptions ? "Ocultar" : "Ver"} asunciones ({assumptions.length})
-              </button>
-              {showAssumptions && (
-                <div style={{ marginTop: "8px", opacity: 0.8 }}>
-                  {assumptions.map((a, i) => <div key={i}>· {a}</div>)}
-                </div>
-              )}
-            </>
-          )}
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div className="content-card">
+        <h3 className="card-title">Registrar Entrenamiento</h3>
+        <div className="form-group">
+          <label>¿Qué ejercicios hiciste?</label>
+          <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Describe tu entrenamiento..." style={{ minHeight: "96px" }} />
         </div>
-      )}
+        <button onClick={handleParse} className="btn btn-primary" disabled={loading} style={{ marginBottom: "16px" }}>
+          {loading ? "Analizando..." : "Parsear con IA"}
+        </button>
+        {error && <div className="error">{error}</div>}
+        {success && (
+          <div className="success-banner">
+            {success}
+            {assumptions.length > 0 && (
+              <>
+                {"\n"}
+                <button
+                  onClick={() => setShowAssumptions(p => !p)}
+                  style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11px", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                >
+                  📝 {showAssumptions ? "Ocultar" : "Ver"} asunciones ({assumptions.length})
+                </button>
+                {showAssumptions && (
+                  <div style={{ marginTop: "8px", opacity: 0.8 }}>
+                    {assumptions.map((a, i) => <div key={i}>· {a}</div>)}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="content-card">
+        <h3 className="card-title">Historial de entrenamientos</h3>
+        {loadingHistory ? (
+          <div className="loading-center"><div className="loading" /></div>
+        ) : history.length === 0 ? (
+          <p className="empty-state">Sin entrenamientos registrados todavía.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+            {history.map((h: any) => {
+              const exs: any[] = h.exercises || [];
+              const isExpanded = expandedId === h.id;
+              return (
+                <div key={h.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: "12px", marginBottom: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+                        <span style={{ fontSize: "12px", color: "var(--muted)", whiteSpace: "nowrap" }}>{fmtDate(h.date)}</span>
+                        <span style={{ fontSize: "12px", color: "var(--muted)" }}>{exs.length} ejercicio{exs.length !== 1 ? "s" : ""}</span>
+                      </div>
+                      <p style={{ fontSize: "13px", color: "var(--text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isExpanded ? "normal" : "nowrap" }}>
+                        {exs.length > 0 ? exs.map(formatExerciseLine).join(" · ") : h.raw_input || "—"}
+                      </p>
+                      {isExpanded && exs.length > 0 && (
+                        <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                          {exs.map((e, i) => (
+                            <div key={i} style={{ fontSize: "12px", color: "var(--muted)", fontFamily: "'JetBrains Mono', monospace" }}>
+                              {formatExerciseLine(e)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {exs.length > 1 && (
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : h.id)}
+                          style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11px", cursor: "pointer", padding: "4px 0 0", textDecoration: "underline" }}
+                        >
+                          {isExpanded ? "Ver menos" : "Ver detalle"}
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      {deleteId === h.id ? (
+                        <span style={{ fontSize: "12px" }}>
+                          <button onClick={() => handleDelete(h.id)} style={{ color: "var(--coral)", background: "none", border: "none", cursor: "pointer", marginRight: "8px", fontSize: "12px" }}>Confirmar</button>
+                          <button onClick={() => setDeleteId(null)} style={{ color: "var(--muted)", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Cancelar</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setDeleteId(h.id)} style={{ color: "var(--coral)", background: "none", border: "none", cursor: "pointer", fontSize: "16px" }}>×</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
