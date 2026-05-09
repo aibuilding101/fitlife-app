@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
         activity_level: profile?.activity_level,
         goal: profile?.goal,
         weight_kg: profile?.weight_kg,
+        sex: profile?.sex,
       },
       targets,
       today: todayTotals,
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
       macro_target_carbs: macros.carbs_g,
       macro_target_fat: macros.fat_g,
     };
-    // sex column doesn't exist in DB yet — used only for BMR calculation
+    if (sex) profilePayload.sex = sex;
     if (body_fat_percent) profilePayload.body_fat_percent = parseFloat(body_fat_percent);
 
     const { error: upsertErr } = await supabase.from("user_profiles").upsert(
