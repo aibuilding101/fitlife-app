@@ -33,9 +33,17 @@ export default function OnboardingPage() {
   const [activity, setActivity] = useState("moderate");
   const [goal, setGoal]       = useState("CUT");
 
+  // No hard redirect — let handleFinish redirect to login if truly unauthenticated
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) router.push("/auth/login");
+      if (!session) {
+        // Try waiting for Supabase to hydrate (post-signup session may be delayed)
+        setTimeout(() => {
+          supabase.auth.getSession().then(({ data: { session: s2 } }) => {
+            if (!s2) router.push("/auth/login");
+          });
+        }, 2000);
+      }
     });
   }, [router]);
 

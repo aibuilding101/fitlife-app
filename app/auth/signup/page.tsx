@@ -24,7 +24,8 @@ export default function SignUp() {
         options: { data: { name } },
       });
       if (signUpError) throw signUpError;
-      if (data.user) router.push("/onboarding");
+      // Redirect regardless of session state (email confirmation may delay session)
+      if (data.user || data.session) router.push("/onboarding");
     } catch (err: any) {
       setError(err.message || "Error signing up");
     } finally {
